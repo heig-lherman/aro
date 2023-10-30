@@ -1,0 +1,82 @@
+1.1.1) Car l'offset est calculé à partir du PC actuel dans l'état execute, mais le saut 
+       sera executé une étape plus tard (après memory access), le PC aura donc été incrémenté
+       une fois de plus
+
+1.1.2) Car le LR doit être synchronisé avec l'opération en cours, donc il suit les données.
+       Le LR stocké dans la banque de registre est celui de l'opération qui sort de la pipeline.
+
+1.1.3) Car une fois que l'opération est décodée il n'y a plus besoins des addresses des registres
+       sources, il n'y besoin que de l'adresse de destination. Dans execute, les données sources
+       viennent de la banque de registre qui elle avait accès aux addresses nécessaires.
+
+1.1.4) Car les bus de contrôles doivent suivre le flux des opérations, si le bloc decode est désactivé
+       alors les bus de contrôle ne doivent pas être mis à jour, pour que les données en sortie correspondent
+       à l'état de l'opération actuelle qui est bloquée dans le stage.
+
+1.1.5) Execute prendrait 3 cycles, il faudrait donc avoir une pipeline avec plus de stages, ou alors
+       introduire une bubble de 2 cycles pour que l'opération puisse être effectuée avant de passer à
+       la suite de l'exécution du programme.
+
+1.2.1) Non, il y a des aléas et donc les registres n'ont pas les valeurs attendues à la fin.
+
+1.2.2) 15
+
+1.3.1) RAW
+
+1.3.2) 3
+
+1.3.3) 0.5 / 2000 instructions par secondes / 12 instructions de latence
+
+2.1.1) On compare l'adresse du registre de destination avec les adresses des registres source que l'on
+       enregistre pour chaque stage de la pipeline. Si une des addresses est égale et que l'on confirme
+       qu'elle est utilisée alors le stage de la pipeline correspondant est une instruction dépendante.
+
+2.1.2) Oui, la donnée au stage WB n'est pas encore écrite dans la banque de registre, donc les données
+       qui partiraient depuis la banque de registre vers l'opération suivante ne seront pas à jour.
+
+2.1.3) Si le registre de destination est utilisé et l'addresse du registre D.
+
+2.1.4) reg_bank_write_en
+
+2.2.1) n   => sel_operand_1_s = 0
+       m   => sel_operand_2_s = 0 & !lsl_r_r_imm & !lsr_r_r_imm & !asr_r_r_imm
+       mem => sel_mem_s = 1
+
+2.2.2) Tous, en immédiat IF et ID sont disabled, et après la bubble va se propager pour chaque stage
+       progressivement à chaque coup de clock, c'est-à-dire avec un 3 registres chaînés.
+       Une fois l'aléa résolu, IF et ID sont réactivés, et les stages suivants à chaque coup de clock
+       suivants.
+
+3.1.1) Détermine si l'opération en cours de decode est une opération de mémoire, donc si l'opération suivante
+       pourra être forwardée depuis execute ou non.
+
+3.1.2) Oui c'est utile, ça évite d'avoir des aléas qui interrompent la pipeline d'un cycle. Dans execute, 
+       un registre est ajouté pour stocké la sortie du stage et la forwarder si demandé par la hazard unit
+       pour l'opération suivante.
+
+3.1.3) Le forwarding doit avoir lieu quand le stage est actif et qu'il y a un data hazard. Pour un aléa sur
+       une opération de load (ldr, ldrh, ldrb, ...) il faut aussi que l'aléa ne soient pas sur le bloc execute,
+       car la donnée sera disponible seulement après le stage MEM.
+
+       Le forwarding est donc utile quand nous avons un aléa et que la donnée en question est disponible 
+       dans le stage avec lequel on entre en aléa.
+
+3.1.4) Le forwarding permet d'éviter pratiquement tous les besoins de bubbling. La seule exception est pour
+       une opération dépendante d'une opération de load qui est placée juste avant, où il faudra quand même 
+       introduire une bubble.
+
+3.2.1) Pour que les valeurs utilisées pour l'execute soient forwardées correctement si c'est demandé, sinon
+       le stage execute prendrait les valeurs de la banque de registres qui ne sont pas à jour.
+
+3.2.2) Pour que la bonne adresse soit utilisée lors de la lecture/écriture dans le bloc memory access, cela
+       permet de transmettre la valeur au bloc suivant facilement.
+
+3.2.3) On stocke la valeur en sortie du stage MEM dans un registre pour l'utiliser comme donnée de forward 
+       à l'instruction suivante.
+
+3.3.1) Oui / Oui / Oui
+
+3.3.2) 1 / 4000 instructions par seconde
+
+3.3.3) Non, car j'ai déjà implémenté les optimisations pour le forwarding depuis WB.
+
